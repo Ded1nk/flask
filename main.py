@@ -8,12 +8,55 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import os
 from flask_socketio import SocketIO, emit
-app = Flask(__name__)
 
+
+import plotly.graph_objects as go
+from plotly.utils import PlotlyJSONEncoder
+
+
+from flask_httpauth import HTTPBasicAuth
+
+app = Flask(__name__)
+socketio = SocketIO(app)
+auth = HTTPBasicAuth()
+
+users = {
+    "aaron": "hmmm",
+    # Add other users here as needed
+}
+
+
+@auth.error_handler
+def auth_error(status):
+    return make_response("Hmm.", status)
+
+
+
+@auth.verify_password
+def verify_password(username, password):
+    if username in users and users[username] == password:
+        return username
+
+@socketio.on('broadcast_sound')  # Changed to 'broadcast_sound'
+def handle_click(message):
+    emit('notification', {'msg': 'Button was clicked!'}, broadcast=True)
 
 @app.route('/')
 def index():
-    return jsonify({"Choo Choo": "Welcome to your Flask app 🚅"})
+    return render_template('tester.html')
+
+
+
+
+
+
+
+
+#@socketio.on('housing_avalible')
+#def handle_click(message):
+    emit('notification', {'msg': 'ROOMS AVALIBLE!'}, broadcast=True)
+
+
 parameters_list = []
 
 @app.route("/casa")
@@ -53,7 +96,7 @@ def create_table(parameters_list):
     # Create a table figure
     header_values = ["Status", "Timestamp"]
     cell_colors = [
-        ['Red' if entry['status'] == 'no_room' else 'Green' if entry['status'] == 'room_available' else 'Yellow' for entry in parameters_list]
+        ['Red' if entry['status'] == 'no_room' else 'Green' if entry['status'] == 'room_available' else 'Grey' for entry in parameters_list]
     ]
     cell_values = [
         [entry['status'] for entry in parameters_list],
@@ -81,6 +124,7 @@ def create_line_graph():
 
     # casa?password=password&status=no room&timestamp=test
 
+
 def create_plot(file_paths):
     data = []
     for file_path in file_paths:
@@ -100,6 +144,22 @@ def create_plot(file_paths):
     fig = go.Figure(data=data, layout=layout)
     return json.dumps(fig, cls=PlotlyJSONEncoder)
 
+@app.route('/tahoe')
+def tahoe():
+    file_paths = ['/home/alexlamstein/mysite/valley_data.csv', '/home/alexlamstein/mysite/mountain_data.csv','/home/alexlamstein/mysite/four_bedroom_residence_data.csv']  # Example file paths
+    plot_json = create_plot(file_paths)
+    return render_template('tahoe.html', plot_json=plot_json)
 
+
+
+@app.route('/message')
+def message():
+    return render_template('message.html')
+
+@socketio.on('send_message')
+def handle_message(data):
+    socketio.emit('broadcast_message', data)
+
+    
 if __name__ == '__main__':
     app.run(debug=True, port=os.getenv("PORT", default=5000))

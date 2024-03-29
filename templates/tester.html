@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Notification App</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
+    <script>
+        var socket = io('https://alexlamstein.pythonanywhere.com', { transports: ['websocket', 'polling'] });
+
+        // Create the AudioContext outside of any user gesture handlers.
+        var audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        var soundBuffer;
+
+        // Function to load and play the sound file
+        function loadSound(url) {
+            var request = new XMLHttpRequest();
+            request.open('GET', url, true);
+            request.responseType = 'arraybuffer';
+
+            request.onload = function() {
+                audioContext.decodeAudioData(request.response, function(buffer) {
+                    soundBuffer = buffer;
+                    playSound(soundBuffer); // Play sound after loading
+                }, function(e) {
+                    console.log("Error with decoding audio data" + e.err);
+                });
+            };
+            request.send();
+        }
+
+        function playSound(buffer) {
+            if (audioContext.state === 'suspended') {
+                audioContext.resume().then(() => {
+                    startPlaying(buffer);
+                });
+            } else {
+                startPlaying(buffer);
+            }
+        }
+
+        function startPlaying(buffer) {
+            var source = audioContext.createBufferSource();
+            source.buffer = buffer;
+            source.connect(audioContext.destination);
+            source.start(0);
+        }
+
+        socket.on('connect', function() {
+            console.log('Connected to the server.');
+            // Do not load sound here; load it after a user gesture
+        });
+
+        socket.on('notification', function(data) {
+            alert(data.msg);
+            if (soundBuffer) {
+                playSound(soundBuffer);
+            } else {
+                loadSound('/static/james_sound.mp3');
+            }
+        });
+
+        window.sendNotification = function() {
+            console.log('Sending notification request to server.');
+            if (!soundBuffer) {
+                loadSound('/static/james_sound.mp3');
+            } else {
+                playSound(soundBuffer);
+            }
+            socket.emit('broadcast_sound', {});
+        };
+    </script>
+</head>
+<body>
+    <button onclick="sendNotification()">Click Me</button>
+</body>
+</html>

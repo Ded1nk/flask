@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Casadeoro Housing Portal</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        #container {
+            width: 80%;
+            margin: auto;
+            margin-top: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <h1>Request List</h1>
+        <div id="table"></div>
+        <h1>Odds of james getting a room</h1>
+        <div id="line-graph"></div>
+    </div>
+
+    <script>
+        var table = {{ graphJSON|safe }};
+        var lineGraph = {{ line_graphJSON|safe }};
+        Plotly.newPlot('table', table.data, table.layout);
+        Plotly.newPlot('line-graph', lineGraph.data, lineGraph.layout);
+    </script>
+</body>
+</html>
